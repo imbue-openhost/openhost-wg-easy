@@ -304,6 +304,17 @@ class AuthProxyHandler(BaseHTTPRequestHandler):
             and "text/html" in accept.lower()
         )
 
+        # Diagnostic logging: helps debug SSO flow.  Lists cookie NAMES
+        # only (not values, which are sensitive).
+        log.info(
+            "DIAG path=%s owner=%s has_wg_cookie=%s html_nav=%s cookies=%s",
+            path_only,
+            is_owner,
+            has_wgeasy_session,
+            is_html_navigation,
+            sorted(cookies.keys()),
+        )
+
         if is_owner and not has_wgeasy_session and is_html_navigation:
             if self._maybe_auto_login():
                 return
