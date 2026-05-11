@@ -6,7 +6,7 @@ with a web UI — packaged as an OpenHost app.
 ## What this gives you
 
 A self-hosted WireGuard VPN server reachable over the public
-internet at `<zone>.selfhost.imbue.com:51820/udp`.  Use it to:
+internet at `<zone>.selfhost.imbue.com:51823/udp`.  Use it to:
 
 - Connect your laptop/phone back to your home network when on the
   road.
@@ -48,7 +48,7 @@ browser → OpenHost router (gates zone_auth, stamps
               │  Set-Cookie wg-easy=<sealed>, 302 back
               └─ everything else → 127.0.0.1:51821 (wg-easy Nuxt)
 
-wireguard-client (laptop, phone) → <zone>:51820/udp
+wireguard-client (laptop, phone) → <zone>:51823/udp
                                  → wireguard-go (in this container)
                                  → routes per peer's AllowedIPs
 ```
@@ -117,7 +117,7 @@ first boot; persisted in the SQLite DB after that):
 | Env                | Default            | Meaning                            |
 | ------------------ | ------------------ | ---------------------------------- |
 | `INIT_HOST`        | `$OPENHOST_ZONE_DOMAIN` | Server endpoint in peer configs   |
-| `INIT_PORT`        | `51820`            | UDP listen port                    |
+| `INIT_PORT`        | `51823`            | UDP listen port (must match `host_port` in `openhost.toml`) |
 | `INIT_IPV4_CIDR`   | `10.42.42.0/24`    | Tunnel IPv4 subnet                 |
 | `INIT_IPV6_CIDR`   | `fdcc:ad94:bacf:61a3::/64` | Tunnel IPv6 subnet         |
 | `INIT_DNS`         | `1.1.1.1,9.9.9.9`  | DNS pushed to clients              |

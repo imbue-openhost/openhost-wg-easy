@@ -23,14 +23,19 @@ capabilities = ["NET_ADMIN", "NET_RAW"]
 devices = ["/dev/net/tun"]
 
 # WireGuard UDP listener.  Published directly by OpenHost on the
-# host's 0.0.0.0:51820 (both TCP and UDP are bound; only UDP is
-# meaningful here).  Clients reach us as <zone>:51820/udp regardless
-# of subdomain.  51820 is the default WireGuard convention; pick
-# a different host_port if it's already taken by another app.
+# host's 0.0.0.0:51823 (both TCP and UDP are bound; only UDP is
+# meaningful here).  Clients reach us as <zone>:51823/udp regardless
+# of subdomain.
+#
+# We can't use the canonical 51820 because some OpenHost hosts run
+# a host-level WireGuard service on that port; picking 51823 keeps
+# us out of the way.  If you change this you also need to update
+# INIT_PORT in start.sh so wg-easy advertises the same port to
+# clients.
 [[ports]]
 label = "wireguard"
-container_port = 51820
-host_port = 51820
+container_port = 51823
+host_port = 51823
 
 [routing]
 # Auth-proxy serves a static /_healthz so the OpenHost healthcheck

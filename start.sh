@@ -91,9 +91,11 @@ export INIT_PASSWORD="$WGEASY_ADMIN_PASSWORD"
 # Tell wg-easy which public host clients should connect to.  This
 # becomes the Endpoint in the generated WireGuard configs.
 export INIT_HOST="${ZONE_DOMAIN}"
-# WireGuard UDP listen port.  Must match the host_port in
-# openhost.toml's [[ports]] entry.
-export INIT_PORT=51820
+# WireGuard UDP listen port.  Must match BOTH container_port and
+# host_port in openhost.toml's [[ports]] entry (we keep them equal
+# so peer configs' Endpoint:port matches what wg-easy binds to
+# internally and what's published to the public internet).
+export INIT_PORT=51823
 # IPv4-only.  IPv6 inside rootless podman is fragile and most
 # OpenHost zones don't have a routable IPv6 anyway.  Both INIT_*_CIDR
 # vars must be set together (wg-easy's group rule).
