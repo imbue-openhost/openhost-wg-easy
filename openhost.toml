@@ -1,0 +1,63 @@
+[app]
+name = "wg-easy"
+version = "0.1.0"
+description = "wg-easy — WireGuard VPN server with a web UI, packaged for OpenHost. UDP 51820 is published directly on the host so any WireGuard client (Linux, macOS, iOS, Android, Windows) can connect to the zone over the public internet. The web UI is gated by zone_auth via the OpenHost router and auto-logged-in to the wg-easy admin account via an SSO sidecar."
+authors = ["Andrew Laack <andrew@laack.co>"]
+
+[runtime.container]
+image = "Dockerfile"
+# OpenHost-routed HTTP port.  The auth-proxy sidecar listens here,
+# auto-logs the owner in by replaying wg-easy's /api/session, and
+# proxies everything else to wg-easy on 127.0.0.1:51821.
+port = 8080
+
+# Capabilities and devices required by WireGuard:
+#   * NET_ADMIN: bring up tunnel interface, manage iptables / nftables.
+#   * NET_RAW:   raw sockets for ICMP / iptables modules.
+#   * /dev/net/tun: required by wireguard-go's userspace tunnel.
+# We intentionally do NOT request SYS_MODULE (not on OpenHost's safe-cap
+# allowlist anyway): the container uses wireguard-go (userspace WG)
+# instead of the kernel module.  Performance is lower than kernel-WG
+# but more than adequate for a few-dozen-peer homelab setup.
+capabilities = ["NET_ADMIN", "NET_RAW"]
+devices = ["/dev/net/tun"]
+
+# WireGuard UDP listener.  Published directly by OpenHost on the
+# host's 0.0.0.0:51820 (both TCP and UDP are bound; only UDP is
+# meaningful here).  Clients reach us as <zone>:51820/udp regardless
+# of subdomain.  51820 is the default WireGuard convention; pick
+# a different host_port if it's already taken by another app.
+[[ports]]
+label = "wireguard"
+container_port = 51820
+host_port = 51820
+
+[routing]
+# Auth-proxy serves a static /_healthz so the OpenHost healthcheck
+# doesn't depend on wg-easy's Nuxt cold-start (which can take ~10s).
+health_check = "/_healthz"
+
+# Nothing on the web UI should be public — every WireGuard config
+# download contains a private key.  Default zone_auth gating only.
+# (No public_paths.)
+
+[resources]
+# wg-easy: Nuxt server (~200 MiB) + SQLite + wireguard-go.
+# Memory grows with peer count; 512 MiB is comfortable for ~100 peers.
+memory_mb = 512
+cpu_millicores = 500
+
+[data]
+# Persistent state under /data/app_data/wg-easy/:
+#   * wg-easy/                — wg-easy's /etc/wireguard dir.  Contains
+#                               sqlite.db (peers, settings) and
+#                               server/client WireGuard private keys.
+#   * admin-credentials.txt   — generated wg-easy admin password.
+#                               *** This IS a credential.  The whole
+#                               app_data dir is sensitive (it holds
+#                               every peer's private key already), so
+#                               the password file does not meaningfully
+#                               expand the threat model.  Treat the
+#                               entire dir as secret. ***
+app_data = true
+app_temp_data = false
