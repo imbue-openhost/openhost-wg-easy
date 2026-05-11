@@ -42,9 +42,11 @@ host_port = 51823
 # doesn't depend on wg-easy's Nuxt cold-start (which can take ~10s).
 health_check = "/_healthz"
 
-# Nothing on the web UI should be public — every WireGuard config
-# download contains a private key.  Default zone_auth gating only.
-# (No public_paths.)
+# Only the healthcheck path is exposed without zone_auth so the
+# OpenHost router's liveness probe can hit it.  Everything else —
+# UI, API, peer-config downloads — is owner-only.  Every config
+# download contains private keys.
+public_paths = ["/_healthz"]
 
 [resources]
 # wg-easy: Nuxt server (~200 MiB) + SQLite + wireguard-go.
