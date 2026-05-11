@@ -82,6 +82,16 @@ export HOST=127.0.0.1
 # hop behind the OpenHost router which terminates TLS.
 export INSECURE=true
 
+# Disable IPv6 entirely.  Rootless podman containers on most
+# OpenHost hosts don't have the `ip6_tables` kernel module
+# loadable from inside the userns, so wg-quick's IPv6 NAT setup
+# (`ip6tables -t nat -A POSTROUTING ...`) fails and tears down
+# the whole wg0 interface.  Disabling IPv6 keeps the IPv4 tunnel
+# working.  Clients still get a routable IPv4 (10.42.42.x/24) and
+# can reach the wider internet through it if INIT_ALLOWED_IPS
+# includes 0.0.0.0/0.
+export DISABLE_IPV6=true
+
 # Unattended-setup envs.  Wg-easy's setup wizard runs once on the
 # first request after INIT_ENABLED=true is observed.  After the
 # admin user exists, these envs are ignored.
@@ -97,16 +107,21 @@ export INIT_HOST="${ZONE_DOMAIN}"
 # internally and what's published to the public internet).
 export INIT_PORT=51823
 # IPv4-only.  IPv6 inside rootless podman is fragile and most
-# OpenHost zones don't have a routable IPv6 anyway.  Both INIT_*_CIDR
-# vars must be set together (wg-easy's group rule).
+# OpenHost zones don't have a routable IPv6 anyway.  Both
+# INIT_*_CIDR vars must be set together (wg-easy's group rule)
+# even though DISABLE_IPV6=true above will keep the v6 side from
+# being applied to the wg0 interface.
 export INIT_IPV4_CIDR="10.42.42.0/24"
 export INIT_IPV6_CIDR="fdcc:ad94:bacf:61a3::/64"
+# IPv4-only for clients too: dropping ::/0 from the allowed IPs.
+# (Mirrors the DISABLE_IPV6=true above.)
 # Default DNS for clients — Cloudflare's privacy resolver + Quad9
 # fallback.  Owners can change this per-peer in the UI.
 export INIT_DNS="1.1.1.1,9.9.9.9"
 # Route all client traffic through the tunnel by default (full-VPN
 # mode).  Owners can flip per-peer to split-tunnel in the UI.
-export INIT_ALLOWED_IPS="0.0.0.0/0,::/0"
+# IPv4-only — see DISABLE_IPV6 note above.
+export INIT_ALLOWED_IPS="0.0.0.0/0"
 
 # Use the userspace WireGuard implementation (wireguard-go).  The
 # kernel module isn't loadable in a rootless container without
@@ -117,13 +132,22 @@ export WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
 # Sysctls.  ip_forward is namespaced; we own this netns, so we can
 # set it without affecting the host.  Best-effort: warn but don't
 # abort if /proc/sys is read-only (some sandboxed setups).
+#
+# Try sysctl(8) first, then a direct /proc/sys write as fallback —
+# some podman + nodaemon-supervisor combos make /etc/sysctl.d
+# unwritable but /proc/sys/net itself remains rw.
 # -----------------------------------------------------------------
 echo "[start.sh] Enabling IP forwarding inside container netns"
-sysctl -w net.ipv4.ip_forward=1 >/dev/null 2>&1 \
-    || echo "[start.sh] WARN: could not set net.ipv4.ip_forward=1 — VPN routing may not work" >&2
-sysctl -w net.ipv4.conf.all.src_valid_mark=1 >/dev/null 2>&1 || true
-sysctl -w net.ipv6.conf.all.disable_ipv6=0 >/dev/null 2>&1 || true
-sysctl -w net.ipv6.conf.all.forwarding=1 >/dev/null 2>&1 || true
+if ! sysctl -w net.ipv4.ip_forward=1 >/dev/null 2>&1; then
+    if echo 1 > /proc/sys/net/ipv4/ip_forward 2>/dev/null; then
+        echo "[start.sh] Set ip_forward=1 via /proc/sys (sysctl(8) unavailable)"
+    else
+        echo "[start.sh] WARN: could not set net.ipv4.ip_forward=1 — VPN routing may not work" >&2
+        echo "[start.sh] DEBUG: /proc/sys/net/ipv4/ip_forward current: $(cat /proc/sys/net/ipv4/ip_forward 2>/dev/null || echo unreadable)" >&2
+    fi
+fi
+sysctl -w net.ipv4.conf.all.src_valid_mark=1 >/dev/null 2>&1 \
+    || echo 1 > /proc/sys/net/ipv4/conf/all/src_valid_mark 2>/dev/null || true
 
 # -----------------------------------------------------------------
 # Start the auth-proxy first.  It serves /_healthz immediately so
