@@ -30,9 +30,10 @@ RUN apk add --no-cache python3 py3-pip curl bash
 # child processes reliably.
 ENV WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
 RUN mv /usr/bin/wg-quick /usr/bin/wg-quick-real \
- && printf '#!/bin/sh\nexport WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go\nexec /usr/bin/wg-quick-real "$@"\n' \
+ && printf '#!/bin/sh\necho "[wg-quick-wrapper] forcing userspace wireguard-go" >&2\nexport WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go\nexec /usr/bin/wg-quick-real "$@"\n' \
       > /usr/bin/wg-quick \
- && chmod 0755 /usr/bin/wg-quick
+ && chmod 0755 /usr/bin/wg-quick \
+ && cat /usr/bin/wg-quick
 
 # Listen settings expected by us in start.sh.
 # PORT is the wg-easy UI port (internal, not OpenHost-routed).
