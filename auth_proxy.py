@@ -458,23 +458,6 @@ class AuthProxyHandler(BaseHTTPRequestHandler):
                 self._safe_send_error(502, "upstream response too large")
                 return
 
-            # wg-easy returns 500 on /api/client when the WireGuard
-            # interface isn't up yet (e.g. during initial setup or if
-            # wireguard-go failed).  Return an empty client list so the
-            # UI loads instead of showing an opaque error page.
-            if upstream.status >= 500 and self.path.rstrip("/") == "/api/client":
-                log.info("upstream 500 on /api/client; returning empty list")
-                empty = b"[]"
-                try:
-                    self.send_response(200)
-                    self.send_header("Content-Type", "application/json")
-                    self.send_header("Content-Length", str(len(empty)))
-                    self.end_headers()
-                    self.wfile.write(empty)
-                except OSError:
-                    pass
-                return
-
             reason = upstream.reason or ""
             try:
                 self.send_response(upstream.status, reason)
