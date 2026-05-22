@@ -150,6 +150,28 @@ sysctl -w net.ipv4.conf.all.src_valid_mark=1 >/dev/null 2>&1 \
     || echo 1 > /proc/sys/net/ipv4/conf/all/src_valid_mark 2>/dev/null || true
 
 # -----------------------------------------------------------------
+# Hairpin NAT: VPN clients that visit https://*.andrew-2.selfhost...
+# resolve the zone domain to the host's public IP.  The packet enters
+# the tunnel, arrives at wg0 inside this container, and the kernel
+# tries to forward it to the public IP.  But with pasta networking
+# the public IP isn't directly reachable — Caddy (on ports 80/443)
+# is only reachable at 127.0.0.1 from inside the container.
+#
+# These DNAT rules rewrite VPN-forwarded traffic destined for
+# public_ip:80/443 to 127.0.0.1 so it reaches Caddy.
+# -----------------------------------------------------------------
+PUBLIC_IP=$(getent ahosts "$ZONE_DOMAIN" 2>/dev/null | awk 'NR==1{print $1}')
+if [ -n "$PUBLIC_IP" ]; then
+    echo "[start.sh] Adding hairpin NAT for VPN clients: ${PUBLIC_IP}:80/443 -> 127.0.0.1"
+    for PORT in 80 443; do
+        RULE="-t nat -p tcp -d ${PUBLIC_IP} --dport ${PORT} -j DNAT --to-destination 127.0.0.1:${PORT}"
+        iptables -C PREROUTING ${RULE} 2>/dev/null || iptables -A PREROUTING ${RULE} || true
+    done
+else
+    echo "[start.sh] WARN: could not resolve ${ZONE_DOMAIN} — VPN hairpin NAT not configured" >&2
+fi
+
+# -----------------------------------------------------------------
 # Start the auth-proxy first.  It serves /_healthz immediately so
 # the OpenHost healthcheck has a stable target during wg-easy's
 # ~10s Nuxt cold-start.
