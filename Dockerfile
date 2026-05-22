@@ -34,7 +34,7 @@ ENV WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
 # true, refuses to fall back to wireguard-go even when `ip link add type
 # wireguard` fails (because the container lacks real NET_ADMIN on the host
 # network namespace).  Patching the check out forces the fallback path.
-RUN sed -i 's|\[[ -e /sys/module/wireguard ]]|false|' /usr/bin/wg-quick
+RUN sed -i 's|\[\[ -e /sys/module/wireguard \]\]|false|' /usr/bin/wg-quick
 
 # Listen settings expected by us in start.sh.
 # PORT is the wg-easy UI port (internal, not OpenHost-routed).
