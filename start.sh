@@ -163,8 +163,8 @@ sysctl -w net.ipv4.conf.all.src_valid_mark=1 >/dev/null 2>&1 \
 PUBLIC_IP=$(getent ahosts "$ZONE_DOMAIN" 2>/dev/null | awk 'NR==1{print $1}')
 if [ -n "$PUBLIC_IP" ]; then
     echo "[start.sh] Adding hairpin NAT for VPN clients: ${PUBLIC_IP}:80/443 -> 127.0.0.1"
-    for PORT in 80 443; do
-        RULE="-t nat -p tcp -d ${PUBLIC_IP} --dport ${PORT} -j DNAT --to-destination 127.0.0.1:${PORT}"
+    for HPORT in 80 443; do
+        RULE="-t nat -p tcp -d ${PUBLIC_IP} --dport ${HPORT} -j DNAT --to-destination 127.0.0.1:${HPORT}"
         iptables -C PREROUTING ${RULE} 2>/dev/null || iptables -A PREROUTING ${RULE} || true
     done
 else
