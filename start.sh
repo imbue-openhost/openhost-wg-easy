@@ -161,14 +161,19 @@ sysctl -w net.ipv4.conf.all.src_valid_mark=1 >/dev/null 2>&1 \
 # public_ip:80/443 to 127.0.0.1 so it reaches Caddy.
 # -----------------------------------------------------------------
 PUBLIC_IP=$(getent ahosts "$ZONE_DOMAIN" 2>/dev/null | awk 'NR==1{print $1}')
-if [ -n "$PUBLIC_IP" ]; then
-    echo "[start.sh] Adding hairpin NAT for VPN clients: ${PUBLIC_IP}:80/443 -> 127.0.0.1"
+# Resolve the host gateway — this is the IP the container uses to reach
+# host services (Caddy on :443).  127.0.0.1 inside the container is the
+# container's own loopback, NOT the host.
+HOST_GW=$(getent ahosts "host.containers.internal" 2>/dev/null | awk 'NR==1{print $1}')
+if [ -n "$PUBLIC_IP" ] && [ -n "$HOST_GW" ]; then
+    echo "[start.sh] Adding hairpin NAT for VPN clients: ${PUBLIC_IP}:80/443 -> ${HOST_GW}"
     for HPORT in 80 443; do
-        RULE="-t nat -p tcp -d ${PUBLIC_IP} --dport ${HPORT} -j DNAT --to-destination 127.0.0.1:${HPORT}"
+        RULE="-t nat -p tcp -d ${PUBLIC_IP} --dport ${HPORT} -j DNAT --to-destination ${HOST_GW}:${HPORT}"
         iptables -C PREROUTING ${RULE} 2>/dev/null || iptables -A PREROUTING ${RULE} || true
     done
 else
-    echo "[start.sh] WARN: could not resolve ${ZONE_DOMAIN} — VPN hairpin NAT not configured" >&2
+    echo "[start.sh] WARN: could not resolve zone/gateway — VPN hairpin NAT not configured" >&2
+    echo "[start.sh] DEBUG: PUBLIC_IP=${PUBLIC_IP:-unset} HOST_GW=${HOST_GW:-unset}" >&2
 fi
 
 # -----------------------------------------------------------------
