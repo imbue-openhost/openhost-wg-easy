@@ -29,11 +29,12 @@ RUN apk add --no-cache python3 py3-pip curl bash
 # because wg-easy's Node server may not propagate the env to
 # child processes reliably.
 ENV WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
-RUN mv /usr/bin/wg-quick /usr/bin/wg-quick-real \
- && printf '#!/bin/sh\necho "[wg-quick-wrapper] forcing userspace wireguard-go" >&2\nexport WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go\nexec /usr/bin/wg-quick-real "$@"\n' \
-      > /usr/bin/wg-quick \
- && chmod 0755 /usr/bin/wg-quick \
- && cat /usr/bin/wg-quick
+# With --network=host, the container sees the host's /sys/module/wireguard.
+# wg-quick's fallback logic checks `[[ -e /sys/module/wireguard ]]` and if
+# true, refuses to fall back to wireguard-go even when `ip link add type
+# wireguard` fails (because the container lacks real NET_ADMIN on the host
+# network namespace).  Patching the check out forces the fallback path.
+RUN sed -i 's|\[[ -e /sys/module/wireguard ]]|false|' /usr/bin/wg-quick
 
 # Listen settings expected by us in start.sh.
 # PORT is the wg-easy UI port (internal, not OpenHost-routed).
