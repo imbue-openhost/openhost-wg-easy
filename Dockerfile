@@ -24,7 +24,15 @@ RUN apk add --no-cache python3 py3-pip curl bash
 # (verified in upstream Dockerfile).  WG_QUICK_USERSPACE_IMPLEMENTATION
 # tells wg-quick to use it when the kernel module isn't available
 # (which is always true in a rootless podman container).
+#
+# The env var is set both here and baked into a wg-quick wrapper
+# because wg-easy's Node server may not propagate the env to
+# child processes reliably.
 ENV WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
+RUN mv /usr/bin/wg-quick /usr/bin/wg-quick-real \
+ && printf '#!/bin/sh\nexport WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go\nexec /usr/bin/wg-quick-real "$@"\n' \
+      > /usr/bin/wg-quick \
+ && chmod 0755 /usr/bin/wg-quick
 
 # Listen settings expected by us in start.sh.
 # PORT is the wg-easy UI port (internal, not OpenHost-routed).
