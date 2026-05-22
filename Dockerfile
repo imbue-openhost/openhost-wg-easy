@@ -29,6 +29,10 @@ RUN apk add --no-cache python3 py3-pip curl bash
 # because wg-easy's Node server may not propagate the env to
 # child processes reliably.
 ENV WG_QUICK_USERSPACE_IMPLEMENTATION=wireguard-go
+# wireguard-go also checks /sys/module/wireguard and refuses to run if
+# the kernel module exists.  With --network=host the container sees the
+# host's /sys, so we force it to run anyway.
+ENV WG_I_WANT_USERSPACE_IMPLEMENTATION=1
 # With --network=host, the container sees the host's /sys/module/wireguard.
 # wg-quick's fallback logic checks `[[ -e /sys/module/wireguard ]]` and if
 # true, refuses to fall back to wireguard-go even when `ip link add type
