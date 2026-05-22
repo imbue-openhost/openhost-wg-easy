@@ -154,12 +154,8 @@ sysctl -w net.ipv4.conf.all.src_valid_mark=1 >/dev/null 2>&1 \
 # the OpenHost healthcheck has a stable target during wg-easy's
 # ~10s Nuxt cold-start.
 # -----------------------------------------------------------------
-# OPENHOST_LOCAL_PORT is the port the OpenHost router expects us on.
-# With network_host=true, the container shares the host's network, so
-# we must avoid port conflicts (e.g., the router itself is on 8080).
-LISTEN_PORT="${OPENHOST_LOCAL_PORT:-8080}"
-echo "[start.sh] Starting auth-proxy on 127.0.0.1:${LISTEN_PORT}"
-export AUTH_PROXY_LISTEN_PORT="${LISTEN_PORT}"
+echo "[start.sh] Starting auth-proxy on 0.0.0.0:8080"
+export AUTH_PROXY_LISTEN_PORT=8080
 export AUTH_PROXY_UPSTREAM_HOST=127.0.0.1
 export AUTH_PROXY_UPSTREAM_PORT=51821
 export AUTH_PROXY_CRED_FILE="$CRED_FILE"
