@@ -11,6 +11,12 @@ image = "Dockerfile"
 # proxies everything else to wg-easy on 127.0.0.1:51821.
 port = 8080
 
+# Host networking: pasta (podman's default rootless network mode)
+# proxies individual TCP/UDP connections but cannot forward routed IP
+# packets from a tunnel interface.  WireGuard needs real IP forwarding,
+# so we run in the host's network namespace.
+network_host = true
+
 # Capabilities and devices required by WireGuard:
 #   * NET_ADMIN: bring up tunnel interface, manage iptables / nftables.
 #   * NET_RAW:   raw sockets for ICMP / iptables modules.
