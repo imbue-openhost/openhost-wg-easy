@@ -171,6 +171,8 @@ PROXY_PID=$!
 #   /usr/bin/dumb-init node server/index.mjs
 # WORKDIR is /app in upstream image.  We chdir there explicitly.
 # -----------------------------------------------------------------
+echo "[start.sh] WG_QUICK_USERSPACE_IMPLEMENTATION=${WG_QUICK_USERSPACE_IMPLEMENTATION:-unset}"
+echo "[start.sh] wireguard-go path: $(which wireguard-go 2>&1 || echo 'NOT FOUND')"
 echo "[start.sh] Starting wg-easy (Nuxt server) on 127.0.0.1:$PORT"
 cd /app
 /usr/bin/dumb-init node server/index.mjs &
